@@ -1,7 +1,13 @@
 {
+  "name": "gold-price-proxy",
+  "version": "1.0.0",
+  "main": "proxy.js",
+  "scripts": {
+    "start": "node proxy.js"
+  },
   "dependencies": {
-    "axios": "^1.9.0",
-    "dotenv": "^16.5.0",
-    "ws": "^8.18.2"
+    "axios": "^1.0.0",
+    "ws": "^8.0.0",
+    "dotenv": "^16.0.0"
   }
 }
