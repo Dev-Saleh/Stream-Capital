@@ -10,7 +10,7 @@ require('dotenv').config();
 const app = express();
 app.use(cors());
 
-const port = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 const server = http.createServer(app); // هذا مهم
 
 const wss = new WebSocket.Server({ server }); // نربطه بنفس السيرفر
