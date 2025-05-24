@@ -103,7 +103,7 @@ async function connectToCapitalSocket() {
 
   capitalSocket.on('close', () => {
     console.warn('🔌 Capital.com WebSocket closed. Reconnecting...');
-    attemptReconnect();
+    // attemptReconnect();
   });
 
   capitalSocket.on('error', (err) => {
