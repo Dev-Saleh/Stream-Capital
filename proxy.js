@@ -165,19 +165,6 @@ wss.on('connection', async (ws) => {
       return;
     }
 
-      } catch (e) {
-        console.warn('⚠️ Failed to parse incoming message:', e.message);
-      }
-    });
-
-    capitalWs.on('close', () => {
-      console.warn('🔌 Capital.com stream closed for client');
-    });
-
-    ws.on('close', () => {
-      console.log('❎ Client disconnected');
-      capitalWs.close();
-    });
 
   } catch (error) {
     console.error('❌ Error in client connection handler:', error.message);
@@ -188,6 +175,7 @@ wss.on('connection', async (ws) => {
     ws.close();
   }
 });
+
 
 // wss.on('connection', (ws) => {
 //   console.log('📡 Client connected to proxy');
