@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 8080;
 const SESSION_URL = 'https://api-capital.backend-capital.com/api/v1/session';
 const STREAM_URL = 'wss://api-streaming-capital.backend-capital.com/connect';
 const PING_URL = 'https://api-capital.backend-capital.com/api/v1/ping';
-const MARKET_STATUS_URL = 'https://api-capital.backend-capital.com/api/v1/markets/epics/GOLD';
+const MARKET_STATUS_URL = 'https://api-capital.backend-capital.com/api/v1/markets/GOLD';
 const TOKEN_FILE = path.join(__dirname, 'session.json');
 
 let CST = null;
