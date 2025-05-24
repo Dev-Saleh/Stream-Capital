@@ -17,6 +17,24 @@ let reconnectTimer = null;
 const server = http.createServer();
 const wss = new WebSocket.Server({ server });
 
+async function checkMarketStatus() {
+  try {
+    const response = await axios.get('https://api-capital.backend-capital.com/api/v1/markets/GOLD', {
+      headers: {
+        'CST': CST,
+        'X-SECURITY-TOKEN': X_SECURITY_TOKEN
+      }
+    });
+
+    const status = response.data.marketStatus;
+    console.log(`📊 Market status: ${status}`);
+    return status;
+  } catch (err) {
+    console.error('❌ Failed to check market status:', err.response?.data || err.message);
+    return null;
+  }
+}
+
 /**
  * Authenticate to Capital.com and get session tokens
  */
@@ -58,6 +76,25 @@ async function loginToCapital() {
 async function connectToCapitalSocket() {
   await loginToCapital();
 
+  const marketStatus = await checkMarketStatus();
+  if (marketStatus !== 'TRADEABLE') {
+    console.log('❌ Market is closed, skipping WebSocket connection.');
+
+    const fallback = {
+      status: 'CLOSED',
+      message: 'Market is currently closed.',
+      timestamp: Date.now()
+    };
+
+    wss.clients.forEach(client => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify(fallback));
+      }
+    });
+
+    return;
+  }
+  
   capitalSocket = new WebSocket(STREAM_URL);
 
   capitalSocket.on('open', () => {
