@@ -57,7 +57,8 @@ async function loginToCapital() {
  */
 async function connectToCapitalSocket() {
   await loginToCapital();
-
+ console.log('CST',CST);
+ console.log('X_SECURITY_TOKEN',X_SECURITY_TOKEN);
   capitalSocket = new WebSocket(STREAM_URL);
 
   capitalSocket.on('open', () => {
