@@ -17,24 +17,6 @@ let reconnectTimer = null;
 const server = http.createServer();
 const wss = new WebSocket.Server({ server });
 
-async function checkMarketStatus() {
-  try {
-    const response = await axios.get('https://api-capital.backend-capital.com/api/v1/markets/GOLD', {
-      headers: {
-        'CST': CST,
-        'X-SECURITY-TOKEN': X_SECURITY_TOKEN
-      }
-    });
-
-    const status = response.snapshot.marketStatus;
-    console.log(`📊 Market status: ${status}`);
-    return status;
-  } catch (err) {
-    console.error('❌ Failed to check market status:', err.response?.data || err.message);
-    return null;
-  }
-}
-
 /**
  * Authenticate to Capital.com and get session tokens
  */
@@ -75,12 +57,12 @@ async function loginToCapital() {
  */
 async function connectToCapitalSocket() {
   await loginToCapital();
-  
+
   capitalSocket = new WebSocket(STREAM_URL);
 
   capitalSocket.on('open', () => {
     console.log('✅ Connected to Capital.com streaming');
-  
+
     const subscribeMsg = {
       destination: 'marketData.subscribe',
       correlationId: '100',
@@ -93,8 +75,6 @@ async function connectToCapitalSocket() {
 
     capitalSocket.send(JSON.stringify(subscribeMsg));
   });
-
-
 
   capitalSocket.on('message', (raw) => {
     try {
@@ -146,41 +126,10 @@ function attemptReconnect() {
 }
 
 // Handle client connection to local proxy
-wss.on('connection', async (ws) => {
+wss.on('connection', (ws) => {
   console.log('📡 Client connected to proxy');
-
-  ws.send(JSON.stringify({ message: 'Checking market status for GOLD...' }));
-
-  try {
-    await loginToCapital(); // Ensure tokens are fresh
-    const marketStatus = await checkMarketStatus();
-
-    if (marketStatus !== 'TRADEABLE') {
-      ws.send(JSON.stringify({
-        status: 'CLOSED',
-        message: 'Market is currently closed. Please try again later.',
-        timestamp: Date.now()
-      }));
-      ws.close(); // Optional: close socket if no real-time stream will follow
-      return;
-    }
-
-
-  } catch (error) {
-    console.error('❌ Error in client connection handler:', error.message);
-    ws.send(JSON.stringify({
-      status: 'ERROR',
-      message: 'Internal server error or authentication failed.'
-    }));
-    ws.close();
-  }
+  ws.send(JSON.stringify({ message: 'Connected to GOLD price feed' }));
 });
-
-
-// wss.on('connection', (ws) => {
-//   console.log('📡 Client connected to proxy');
-//   ws.send(JSON.stringify({ message: 'Connected to GOLD price feed' }));
-// });
 
 // Start server
 server.listen(PORT, () => {
