@@ -75,25 +75,6 @@ async function loginToCapital() {
  */
 async function connectToCapitalSocket() {
   await loginToCapital();
-
-  const marketStatus = await checkMarketStatus();
-  if (marketStatus !== 'TRADEABLE') {
-    console.log('❌ Market is closed, skipping WebSocket connection.');
-
-    const fallback = {
-      status: 'CLOSED',
-      message: 'Market is currently closed.',
-      timestamp: Date.now()
-    };
-
-    wss.clients.forEach(client => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify(fallback));
-      }
-    });
-
-    return;
-  }
   
   capitalSocket = new WebSocket(STREAM_URL);
 
@@ -165,10 +146,53 @@ function attemptReconnect() {
 }
 
 // Handle client connection to local proxy
-wss.on('connection', (ws) => {
+wss.on('connection', async (ws) => {
   console.log('📡 Client connected to proxy');
-  ws.send(JSON.stringify({ message: 'Connected to GOLD price feed' }));
+
+  ws.send(JSON.stringify({ message: 'Checking market status for GOLD...' }));
+
+  try {
+    await loginToCapital(); // Ensure tokens are fresh
+    const marketStatus = await checkMarketStatus();
+
+    if (marketStatus !== 'TRADEABLE') {
+      ws.send(JSON.stringify({
+        status: 'CLOSED',
+        message: 'Market is currently closed. Please try again later.',
+        timestamp: Date.now()
+      }));
+      ws.close(); // Optional: close socket if no real-time stream will follow
+      return;
+    }
+
+      } catch (e) {
+        console.warn('⚠️ Failed to parse incoming message:', e.message);
+      }
+    });
+
+    capitalWs.on('close', () => {
+      console.warn('🔌 Capital.com stream closed for client');
+    });
+
+    ws.on('close', () => {
+      console.log('❎ Client disconnected');
+      capitalWs.close();
+    });
+
+  } catch (error) {
+    console.error('❌ Error in client connection handler:', error.message);
+    ws.send(JSON.stringify({
+      status: 'ERROR',
+      message: 'Internal server error or authentication failed.'
+    }));
+    ws.close();
+  }
 });
+
+// wss.on('connection', (ws) => {
+//   console.log('📡 Client connected to proxy');
+//   ws.send(JSON.stringify({ message: 'Connected to GOLD price feed' }));
+// });
 
 // Start server
 server.listen(PORT, () => {
