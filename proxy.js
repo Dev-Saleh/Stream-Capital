@@ -299,6 +299,7 @@ wss.on('connection', (client) => {
     console.log(`🚀 Server running on ws://0.0.0.0:${PORT}`);
 
     marketIsOpen = await checkMarketStatus();
+    console.log(marketIsOpen);
     if (marketIsOpen) {
       await connectToCapitalSocket();
     } else {
