@@ -26,7 +26,7 @@ let noDataTimeout = null;
 const NO_DATA_LIMIT_MS = 15000; // 15 sec no data fallback
 let mockInterval = null;
 const MOCK_INTERVAL_MS = 2000; // 2 sec mock updates
-
+let mockPrice = null;
 // Market status flag
 let marketIsOpen = false;
 
@@ -147,7 +147,7 @@ async function checkMarketStatus() {
 
     const marketStatus = res.data.snapshot?.marketStatus;
     const marketIsOpen = marketStatus === 'OPEN';
-
+    mockPrice = res.data.snapshot?.bid || 3400;
     console.log(`ℹ️ Market status: ${marketIsOpen ? 'OPEN' : 'CLOSED'}`);
     return marketIsOpen;
 
@@ -163,7 +163,7 @@ function startMockData() {
 
   console.log('🟠 Starting mock gold price feed');
 
-  let fakePrice = 3300;
+  let fakePrice = mockPrice;
 
   mockInterval = setInterval(() => {
     fakePrice += (Math.random() - 0.5) * 5; // random small fluctuation
