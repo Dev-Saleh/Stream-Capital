@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: gold-price-proxy
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: CAPITAL_API_KEY
+        sync: false
+      - key: CAPITAL_EMAIL
+        sync: false
+      - key: CAPITAL_PASSWORD
+        sync: false
+    autoDeploy: false
