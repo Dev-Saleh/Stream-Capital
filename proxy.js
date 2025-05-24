@@ -13,12 +13,22 @@ const PORT = process.env.PORT || 8080;
 const SESSION_URL = 'https://api-capital.backend-capital.com/api/v1/session';
 const STREAM_URL = 'wss://api-streaming-capital.backend-capital.com/connect';
 const PING_URL = 'https://api-capital.backend-capital.com/api/v1/ping';
+const MARKET_STATUS_URL = 'https://api-capital.backend-capital.com/api/v1/markets/epics/GOLD';
 const TOKEN_FILE = path.join(__dirname, 'session.json');
 
 let CST = null;
 let X_SECURITY_TOKEN = null;
 let capitalSocket = null;
 let reconnectTimer = null;
+
+// Timer and interval for mock data & no data detection
+let noDataTimeout = null;
+const NO_DATA_LIMIT_MS = 15000; // 15 sec no data fallback
+let mockInterval = null;
+const MOCK_INTERVAL_MS = 2000; // 2 sec mock updates
+
+// Market status flag
+let marketIsOpen = false;
 
 const app = express();
 app.use(cors());
@@ -91,6 +101,65 @@ async function keepSessionAlive() {
 
 setInterval(() => keepSessionAlive().catch(console.error), 9 * 60 * 1000);
 
+// === Market status check ===
+async function checkMarketStatus() {
+  try {
+    const res = await axios.get(MARKET_STATUS_URL);
+    marketIsOpen = res.data.payload?.marketStatus === 'OPEN';
+    console.log(`ℹ️ Market status: ${marketIsOpen ? 'OPEN' : 'CLOSED'}`);
+    return marketIsOpen;
+  } catch (e) {
+    console.error('❌ Failed to fetch market status:', e.message);
+    marketIsOpen = false;
+    return false;
+  }
+}
+
+// === Mock Price Stream ===
+function startMockData() {
+  if (mockInterval) return; // already running
+
+  console.log('🟠 Starting mock gold price feed');
+
+  let fakePrice = 3300;
+
+  mockInterval = setInterval(() => {
+    fakePrice += (Math.random() - 0.5) * 5; // random small fluctuation
+
+    const mockData = {
+      bid: parseFloat(fakePrice.toFixed(2)),
+      ask: parseFloat((fakePrice + 0.3).toFixed(2)),
+      bidQty: 10 + Math.floor(Math.random() * 10),
+      askQty: 10 + Math.floor(Math.random() * 10),
+      timestamp: Date.now(),
+      note: 'mock price, market closed'
+    };
+
+    wss.clients.forEach(client => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify(mockData));
+      }
+    });
+  }, MOCK_INTERVAL_MS);
+}
+
+function stopMockData() {
+  if (mockInterval) {
+    clearInterval(mockInterval);
+    mockInterval = null;
+    console.log('🟢 Stopped mock price feed');
+  }
+}
+
+// === Reset no data timer to fallback on mock data if no real data arrives ===
+function resetNoDataTimer() {
+  if (noDataTimeout) clearTimeout(noDataTimeout);
+  noDataTimeout = setTimeout(() => {
+    console.warn(`⚠️ No real data received for ${NO_DATA_LIMIT_MS / 1000}s, switching to mock prices`);
+    startMockData();
+  }, NO_DATA_LIMIT_MS);
+}
+
 // === Capital Streaming ===
 async function connectToCapitalSocket() {
   try {
@@ -110,12 +179,16 @@ async function connectToCapitalSocket() {
         }
       };
       capitalSocket.send(JSON.stringify(subscribeMsg));
+      resetNoDataTimer();
     });
 
     capitalSocket.on('message', (raw) => {
       try {
         const msg = JSON.parse(raw);
         if (msg.destination === 'quote' && msg.payload?.epic === 'GOLD') {
+          stopMockData(); // stop mock on real data
+          resetNoDataTimer();
+
           const clean = {
             bid: msg.payload.bid,
             ask: msg.payload.ofr,
@@ -134,14 +207,25 @@ async function connectToCapitalSocket() {
       }
     });
 
-    capitalSocket.on('close', () => {
-      console.warn('🔌 Capital WebSocket closed. Reconnecting...');
-      scheduleReconnect();
+    capitalSocket.on('close', async () => {
+      console.warn('🔌 Capital WebSocket closed.');
+      startMockData(); // fallback immediately on close
+
+      // Try reconnect based on market status
+      reconnectTimer = setTimeout(async () => {
+        reconnectTimer = null;
+        const open = await checkMarketStatus();
+        if (open) {
+          await connectToCapitalSocket();
+        } else {
+          console.log('ℹ️ Market closed, continuing mock prices');
+        }
+      }, 5000);
     });
 
     capitalSocket.on('error', (err) => {
       console.error('❌ WebSocket error:', err.message);
-      scheduleReconnect();
+      if (capitalSocket) capitalSocket.close();
     });
   } catch (err) {
     console.error('❌ Failed to connect socket:', err.message);
@@ -164,16 +248,25 @@ wss.on('connection', (client) => {
 });
 
 // === Start Server ===
-loadTokens();
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Server running on ws://0.0.0.0:${PORT}`);
-  connectToCapitalSocket().catch(console.error);
-});
+(async () => {
+  loadTokens();
+  server.listen(PORT, '0.0.0.0', async () => {
+    console.log(`🚀 Server running on ws://0.0.0.0:${PORT}`);
+
+    marketIsOpen = await checkMarketStatus();
+    if (marketIsOpen) {
+      await connectToCapitalSocket();
+    } else {
+      startMockData();
+    }
+  });
+})();
 
 // === Graceful Shutdown ===
 function shutdown() {
   console.log('\n🛑 Shutting down...');
   if (capitalSocket) capitalSocket.close();
+  stopMockData();
   server.close(() => process.exit(0));
 }
 process.on('SIGINT', shutdown);
