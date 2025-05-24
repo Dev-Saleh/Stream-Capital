@@ -80,21 +80,21 @@ async function connectToCapitalSocket() {
     try {
       const msg = JSON.parse(raw);
 
-      if (msg.destination === 'quote' && msg.payload?.epic === 'GOLD') {
-        const cleanData = {
-          bid: msg.payload.bid,
-          ask: msg.payload.ofr,
-          bidQty: msg.payload.bidQty,
-          askQty: msg.payload.ofrQty,
-          timestamp: msg.payload.timestamp,
-        };
+      // if (msg.destination === 'quote' && msg.payload?.epic === 'GOLD') {
+      //   const cleanData = {
+      //     bid: msg.payload.bid,
+      //     ask: msg.payload.ofr,
+      //     bidQty: msg.payload.bidQty,
+      //     askQty: msg.payload.ofrQty,
+      //     timestamp: msg.payload.timestamp,
+      //   };
 
         wss.clients.forEach(client => {
           if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify(cleanData));
+            client.send(JSON.stringify(msg));
           }
         });
-      }
+      // }
     } catch (e) {
       console.warn('⚠️ Failed to parse incoming message:', e.message);
     }
