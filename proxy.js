@@ -116,15 +116,30 @@ async function keepSessionAlive() {
 setInterval(() => keepSessionAlive().catch(console.error), 9 * 60 * 1000);
 
 // === Market status check ===
+// async function checkMarketStatus() {
+//   try {
+//     const res = await axios.get(MARKET_STATUS_URL);
+//     marketIsOpen = res.data.payload?.marketStatus === 'OPEN';
+//     console.log(`ℹ️ Market status: ${marketIsOpen ? 'OPEN' : 'CLOSED'}`);
+//     return marketIsOpen;
+//   } catch (e) {
+//     console.error('❌ Failed to fetch market status:', e.message);
+//     marketIsOpen = false;
+//     return false;
+//   }
+// }
 async function checkMarketStatus() {
   try {
     const res = await axios.get(MARKET_STATUS_URL);
-    marketIsOpen = res.data.payload?.marketStatus === 'OPEN';
+
+    // Defensive: check if snapshot exists and has marketStatus
+    const marketStatus = res.data.snapshot?.marketStatus;
+    const marketIsOpen = marketStatus === 'OPEN';
     console.log(`ℹ️ Market status: ${marketIsOpen ? 'OPEN' : 'CLOSED'}`);
+
     return marketIsOpen;
   } catch (e) {
     console.error('❌ Failed to fetch market status:', e.message);
-    marketIsOpen = false;
     return false;
   }
 }
@@ -141,6 +156,7 @@ function startMockData() {
     fakePrice += (Math.random() - 0.5) * 5; // random small fluctuation
 
     const mockData = {
+      source: 'Mock',
       bid: parseFloat(fakePrice.toFixed(2)),
       ask: parseFloat((fakePrice + 0.3).toFixed(2)),
       bidQty: 10 + Math.floor(Math.random() * 10),
@@ -204,6 +220,7 @@ async function connectToCapitalSocket() {
           resetNoDataTimer();
 
           const clean = {
+            source: 'Real',
             bid: msg.payload.bid,
             ask: msg.payload.ofr,
             bidQty: msg.payload.bidQty,
