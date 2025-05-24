@@ -62,25 +62,7 @@ async function connectToCapitalSocket() {
 
   capitalSocket.on('open', () => {
     console.log('✅ Connected to Capital.com streaming');
-    let receivedQuote = false;
-
-    // Fallback if no quote comes in time
-    const noDataTimeout = setTimeout(() => {
-      if (!receivedQuote) {
-        const fallback = {
-          status: 'NO_DATA',
-          message: 'Market is closed or inactive.',
-          timestamp: Date.now()
-        };
-    
-        wss.clients.forEach(client => {
-          if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify(fallback));
-          }
-        });
-      }
-    }, 1000); // 7s timeout
-
+  
     const subscribeMsg = {
       destination: 'marketData.subscribe',
       correlationId: '100',
@@ -94,56 +76,31 @@ async function connectToCapitalSocket() {
     capitalSocket.send(JSON.stringify(subscribeMsg));
   });
 
+
+
   capitalSocket.on('message', (raw) => {
-  try {
-    const msg = JSON.parse(raw);
+    try {
+      const msg = JSON.parse(raw);
 
-    if (msg.destination === 'quote' && msg.payload?.epic === 'GOLD') {
-      receivedQuote = true; // real data received
-      clearTimeout(noDataTimeout); // cancel fallback
+      if (msg.destination === 'quote' && msg.payload?.epic === 'GOLD') {
+        const cleanData = {
+          bid: msg.payload.bid,
+          ask: msg.payload.ofr,
+          bidQty: msg.payload.bidQty,
+          askQty: msg.payload.ofrQty,
+          timestamp: msg.payload.timestamp,
+        };
 
-      const cleanData = {
-        bid: msg.payload.bid,
-        ask: msg.payload.ofr,
-        bidQty: msg.payload.bidQty,
-        askQty: msg.payload.ofrQty,
-        timestamp: msg.payload.timestamp,
-      };
-
-      wss.clients.forEach(client => {
-        if (client.readyState === WebSocket.OPEN) {
-          client.send(JSON.stringify(cleanData));
-        }
-      });
+        wss.clients.forEach(client => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify(cleanData));
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('⚠️ Failed to parse incoming message:', e.message);
     }
-  } catch (e) {
-    console.warn('⚠️ Failed to parse incoming message:', e.message);
-  }
-});
-
-  // capitalSocket.on('message', (raw) => {
-  //   try {
-  //     const msg = JSON.parse(raw);
-
-  //     if (msg.destination === 'quote' && msg.payload?.epic === 'GOLD') {
-  //       const cleanData = {
-  //         bid: msg.payload.bid,
-  //         ask: msg.payload.ofr,
-  //         bidQty: msg.payload.bidQty,
-  //         askQty: msg.payload.ofrQty,
-  //         timestamp: msg.payload.timestamp,
-  //       };
-
-  //       wss.clients.forEach(client => {
-  //         if (client.readyState === WebSocket.OPEN) {
-  //           client.send(JSON.stringify(msg));
-  //         }
-  //       });
-  //     }
-  //   } catch (e) {
-  //     console.warn('⚠️ Failed to parse incoming message:', e.message);
-  //   }
-  // });
+  });
 
   capitalSocket.on('close', () => {
     console.warn('🔌 Capital.com WebSocket closed. Reconnecting...');
