@@ -26,7 +26,7 @@ async function checkMarketStatus() {
       }
     });
 
-    const status = response.data.marketStatus;
+    const status = response.snapshot.marketStatus;
     console.log(`📊 Market status: ${status}`);
     return status;
   } catch (err) {
