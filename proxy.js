@@ -45,12 +45,26 @@ function saveTokens(cst, token) {
   fs.writeFileSync(TOKEN_FILE, JSON.stringify({ cst, securityToken: token }));
 }
 
+// function loadTokens() {
+//   if (fs.existsSync(TOKEN_FILE)) {
+//     const data = JSON.parse(fs.readFileSync(TOKEN_FILE));
+//     CST = data.cst;
+//     X_SECURITY_TOKEN = data.securityToken;
+//     console.log('🔁 Loaded session tokens from file');
+//   }
+// }
 function loadTokens() {
   if (fs.existsSync(TOKEN_FILE)) {
-    const data = JSON.parse(fs.readFileSync(TOKEN_FILE));
-    CST = data.cst;
-    X_SECURITY_TOKEN = data.securityToken;
-    console.log('🔁 Loaded session tokens from file');
+    try {
+      const data = JSON.parse(fs.readFileSync(TOKEN_FILE, 'utf8'));
+      CST = data.cst;
+      X_SECURITY_TOKEN = data.securityToken;
+      console.log('🔁 Loaded session tokens from file');
+    } catch (err) {
+      console.warn('⚠️ Failed to parse session.json, ignoring. Will login fresh.');
+      CST = null;
+      X_SECURITY_TOKEN = null;
+    }
   }
 }
 
