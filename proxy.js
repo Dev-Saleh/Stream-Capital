@@ -275,6 +275,7 @@ function scheduleReconnect() {
 // === WebSocket Proxy ===
 wss.on('connection', (client) => {
   console.log('📡 Client connected');
+  console.log('💢 X_SECURITY_TOKEN',X_SECURITY_TOKEN);
   client.send(JSON.stringify({ message: 'Connected to GOLD price feed' }));
 });
 
