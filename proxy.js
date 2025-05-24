@@ -91,7 +91,7 @@ async function connectToCapitalSocket() {
 
         wss.clients.forEach(client => {
           if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify(cleanData));
+            client.send(JSON.stringify(msg));
           }
         });
       }
