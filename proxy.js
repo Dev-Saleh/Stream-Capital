@@ -79,7 +79,7 @@ async function connectToCapitalSocket() {
           }
         });
       }
-    }, 7000); // 7s timeout
+    }, 1000); // 7s timeout
 
     const subscribeMsg = {
       destination: 'marketData.subscribe',
