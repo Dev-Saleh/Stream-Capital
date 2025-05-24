@@ -66,6 +66,9 @@ function loadTokens() {
       X_SECURITY_TOKEN = null;
     }
   }
+else {
+  console.log('there is session.json file');
+}
 }
 
 // === Auth ===
@@ -130,16 +133,26 @@ setInterval(() => keepSessionAlive().catch(console.error), 9 * 60 * 1000);
 // }
 async function checkMarketStatus() {
   try {
-    const res = await axios.get(MARKET_STATUS_URL);
+    // Ensure we have tokens
+    if (!CST || !X_SECURITY_TOKEN) {
+      await loginToCapital(); // get tokens if missing
+    }
 
-    // Defensive: check if snapshot exists and has marketStatus
+    const res = await axios.get(MARKET_STATUS_URL, {
+      headers: {
+        CST,
+        'X-SECURITY-TOKEN': X_SECURITY_TOKEN
+      }
+    });
+
     const marketStatus = res.data.snapshot?.marketStatus;
     const marketIsOpen = marketStatus === 'OPEN';
-    console.log(`ℹ️ Market status: ${marketIsOpen ? 'OPEN' : 'CLOSED'}`);
 
+    console.log(`ℹ️ Market status: ${marketIsOpen ? 'OPEN' : 'CLOSED'}`);
     return marketIsOpen;
+
   } catch (e) {
-    console.error('❌ Failed to fetch market status:', e.message);
+    console.error('❌ Failed to fetch market status:', e.response?.data || e.message);
     return false;
   }
 }
