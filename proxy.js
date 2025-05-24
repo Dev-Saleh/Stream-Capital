@@ -100,15 +100,18 @@ async function connectToCapitalSocket() {
       console.warn('⚠️ Failed to parse incoming message:', e.message);
     }
   });
+capitalSocket.on('close', (code, reason) => {
+  console.warn(`🔌 Capital.com WebSocket closed. Code: ${code}, Reason: ${reason.toString()}`);
+});
+  // capitalSocket.on('close', () => {
 
-  capitalSocket.on('close', () => {
-    console.warn('🔌 Capital.com WebSocket closed. Reconnecting...');
-    // attemptReconnect();
-  });
+  //   console.warn('🔌 Capital.com WebSocket closed. Reconnecting...');
+  //   // attemptReconnect();
+  // });
 
   capitalSocket.on('error', (err) => {
     console.error('❌ WebSocket error:', err.message);
-    attemptReconnect();
+    // attemptReconnect();
   });
 }
 
