@@ -288,8 +288,13 @@ function scheduleReconnect() {
 // === WebSocket Proxy ===
 wss.on('connection', (client) => {
   console.log('📡 Client connected');
-  console.log('💢 X_SECURITY_TOKEN',X_SECURITY_TOKEN);
+  console.log(`👥 Live clients: ${wss.clients.size}`);
   client.send(JSON.stringify({ message: 'Connected to GOLD price feed' }));
+
+  client.on('close', (code, reason) => {
+    console.log(`❌ Client disconnected. Code: ${code}, Reason: ${reason}`);
+    console.log(`👥 Live clients: ${wss.clients.size}`);
+  });
 });
 
 // === Start Server ===
