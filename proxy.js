@@ -283,6 +283,7 @@ wss.on('connection', (client) => {
 
 (async () => {
   try {
+
     loadTokens();
     server.listen(PORT, '0.0.0.0', async () => {
       console.log(`🚀 Server running on ws://0.0.0.0:${PORT}`);
@@ -298,6 +299,14 @@ wss.on('connection', (client) => {
     console.error('❌ Failed to start server:', err.message);
   }
 })();
+process.on('uncaughtException', (err) => {
+  console.error('🚨 Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('🚨 Unhandled Rejection at:', promise, 'reason:', reason);
+});
+console.log(`🔁 Server cold boot at ${new Date().toISOString()}`);
 
 function shutdown() {
   console.log('\n🛑 Shutting down...');
